@@ -6,6 +6,7 @@ let discard = null;
 let wildPending = false;
 let isDraw4 = false;
 
+// 1. Initial Name Entry
 function startGame() {
     const n1 = document.getElementById('p1-name-input').value;
     const n2 = document.getElementById('p2-name-input').value;
@@ -17,6 +18,24 @@ function startGame() {
     init();
 }
 
+// 2. Build the Deck
+function createDeck() {
+    const colors = ['red', 'blue', 'green', 'yellow'];
+    deck = [];
+    colors.forEach(c => {
+        for(let i=0; i<=12; i++) {
+            // 0-9 = Numbers, 10 = Reverse, 11 = Skip, 12 = +2
+            deck.push({ color: c, value: i, img: `${c}${i}.png` });
+            if(i !== 0) deck.push({ color: c, value: i, img: `${c}${i}.png` });
+        }
+    });
+    // Wilds (.jpg as requested)
+    for(let i=0; i<4; i++) {
+        deck.push({ color: 'black', value: 'wild', img: 'wild.jpg' });
+        deck.push({ color: 'black', value: 'draw4', img: 'draw4.jpg' });
+    }
+}
+
 function init() {
     createDeck();
     shuffle(deck);
@@ -25,28 +44,15 @@ function init() {
         players[1].push(deck.pop());
     }
     discard = deck.pop();
+    // Ensure game doesn't start with a Wild or Special
     while(discard.color === 'black' || discard.value > 9) { 
         deck.push(discard); shuffle(deck); discard = deck.pop(); 
     }
     renderTable();
-    prepareNextTurn(true); // Start with first player
+    prepareNextTurn(true); 
 }
 
-function createDeck() {
-    const colors = ['red', 'blue', 'green', 'yellow'];
-    deck = [];
-    colors.forEach(c => {
-        for(let i=0; i<=12; i++) {
-            deck.push({ color: c, value: i, img: `${c}${i}.png` });
-            if(i !== 0) deck.push({ color: c, value: i, img: `${c}${i}.png` });
-        }
-    });
-    for(let i=0; i<4; i++) {
-        deck.push({ color: 'black', value: 'wild', img: 'wild.jpg' });
-        deck.push({ color: 'black', value: 'draw4', img: 'draw4.jpg' });
-    }
-}
-
+// 3. Game UI Updates
 function renderTable() {
     document.getElementById('discard-pile').innerHTML = `<img src="images/${discard.img}" class="card shadow">`;
     document.getElementById('turn-display').innerText = playerNames[currentPlayer].toUpperCase();
@@ -65,6 +71,7 @@ function showHand() {
     });
 }
 
+// 4. Rule Enforcement
 function playCard(index) {
     if(wildPending) return;
     const card = players[currentPlayer][index];
@@ -72,10 +79,9 @@ function playCard(index) {
     if (card.color === 'black' || card.color === discard.color || card.value === discard.value) {
         discard = players[currentPlayer].splice(index, 1)[0];
         
-        if (discard.value === 'wild' || discard.value === 'draw4') {
-            isDraw4 = (discard.value === 'draw4');
+        if (discard.color === 'black') {
+            isDraw4 = (discard.img === 'draw4.jpg');
             wildPending = true;
-            document.getElementById('wild-title').innerText = isDraw4 ? "DRAW 4: PICK COLOR" : "WILD: PICK COLOR";
             document.getElementById('wild-modal').classList.remove('hidden');
         } else {
             handleActionCards(discard);
@@ -84,19 +90,20 @@ function playCard(index) {
 }
 
 function handleActionCards(card) {
-    let nextPlayerHit = false;
     const otherPlayer = (currentPlayer === 0) ? 1 : 0;
 
     if (card.value === 10 || card.value === 11) {
-        // Reverse or Skip: In 2p, you get another turn!
-        alert(`${playerNames[currentPlayer]} played a ${card.value === 10 ? 'Reverse' : 'Skip'}! Go again!`);
+        // Skip/Reverse Rule: You go again immediately!
+        alert(`${playerNames[currentPlayer]} skips the opponent! Go again.`);
         renderTable();
         showHand(); 
     } else if (card.value === 12) {
-        // +2 Card
+        // +2 Rule
         players[otherPlayer].push(deck.pop(), deck.pop());
-        alert(`${playerNames[otherPlayer]} draws 2 and skips a turn!`);
-        checkWin(); // End current turn, but effectively skips the next
+        alert(`${playerNames[otherPlayer]} draws 2! Turn skips back to you.`);
+        // In 2p +2, you effectively go again
+        renderTable();
+        showHand();
     } else {
         checkWin();
     }
@@ -110,7 +117,7 @@ function pickWild(c) {
     if(isDraw4) {
         const otherPlayer = (currentPlayer === 0) ? 1 : 0;
         players[otherPlayer].push(deck.pop(), deck.pop(), deck.pop(), deck.pop());
-        alert(`${playerNames[otherPlayer]} draws 4 and skips a turn!`);
+        alert(`${playerNames[otherPlayer]} draws 4!`);
         isDraw4 = false;
     }
     checkWin();
@@ -125,6 +132,14 @@ function handleDraw() {
     }
 }
 
+function prepareNextTurn(isFirstTurn = false) {
+    if(!isFirstTurn) currentPlayer = (currentPlayer === 0) ? 1 : 0;
+    document.getElementById('hand').innerHTML = ''; 
+    document.getElementById('next-player-name').innerText = `READY ${playerNames[currentPlayer].toUpperCase()}?`;
+    document.getElementById('pass-screen').classList.remove('hidden');
+    renderTable();
+}
+
 function checkWin() {
     if(players[currentPlayer].length === 0) {
         alert(`${playerNames[currentPlayer]} WINS!`);
@@ -132,15 +147,6 @@ function checkWin() {
     } else {
         prepareNextTurn();
     }
-}
-
-function prepareNextTurn(isFirstTurn = false) {
-    if(!isFirstTurn) currentPlayer = (currentPlayer === 0) ? 1 : 0;
-    
-    document.getElementById('hand').innerHTML = ''; 
-    document.getElementById('next-player-name').innerText = `READY ${playerNames[currentPlayer].toUpperCase()}?`;
-    document.getElementById('pass-screen').classList.remove('hidden');
-    renderTable();
 }
 
 function shuffle(a) {
