@@ -9,7 +9,7 @@
 <body>
     <div id="pass-screen" class="overlay">
         <h1 id="next-player-name">READY PLAYER 1?</h1>
-        <button class="start-btn" onclick="showHand()">START TURN</button>
+        <button class="menu-btn" onclick="showHand()">START TURN</button>
     </div>
 
     <div id="game-ui">
@@ -19,14 +19,19 @@
         </div>
         
         <div id="table">
-            <div id="deck" onclick="handleDraw()">
-                <img src="images/back.jpg" class="card shadow" alt="Deck">
-                <div class="label">DRAW</div>
+            <div id="deck-container">
+                <div id="deck" onclick="handleDraw()">
+                    <img src="images/back.jpg" class="card shadow" alt="Deck">
+                </div>
+                <button class="draw-btn" onclick="handleDraw()">DRAW CARD</button>
             </div>
+
             <div id="discard-pile"></div>
         </div>
 
-        <div id="hand"></div>
+        <div id="hand-wrapper">
+            <div id="hand"></div>
+        </div>
     </div>
 
     <div id="wild-modal" class="overlay hidden">
