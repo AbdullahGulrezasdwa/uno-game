@@ -1,86 +1,48 @@
 body { 
     background: radial-gradient(#2d5a27, #1a3a16); 
-    margin: 0; 
-    padding: 0;
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    font-family: 'Arial', sans-serif; 
-    height: 100vh; 
-    color: white; 
-    overflow: hidden; 
+    margin: 0; padding: 0;
+    display: flex; flex-direction: column; align-items: center; 
+    font-family: 'Arial', sans-serif; height: 100vh; color: white; overflow: hidden; 
 }
 
-#game-ui { width: 100%; display: flex; flex-direction: column; align-items: center; }
+#table { display: flex; justify-content: center; align-items: center; gap: 60px; margin-top: 30px; }
 
-#status-bar { text-align: center; margin-top: 10px; height: 80px; }
-
-#table { 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    gap: 60px; 
-    margin-top: 20px; 
-}
-
-/* Deck & Draw Button Styling */
-#deck-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
+#deck-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
 .draw-btn {
-    background: #e74c3c;
-    color: white;
-    border: 2px solid white;
-    padding: 8px 15px;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
+    background: #e74c3c; color: white; border: 2px solid white;
+    padding: 8px 16px; border-radius: 5px; font-weight: bold; cursor: pointer;
 }
-
-.draw-btn:hover { background: #c0392b; transform: scale(1.05); }
 
 .card { width: 110px; border-radius: 8px; }
 .shadow { box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
 
-/* Centering the Hand */
-#hand-wrapper {
-    position: fixed;
-    bottom: 30px;
-    width: 100%;
-    display: flex;
-    justify-content: center; /* Centers the hand horizontally */
+/* Hand Centering Logic */
+#hand-container {
+    position: fixed; bottom: 30px;
+    width: 100%; display: flex; justify-content: center;
 }
 
 #hand { 
-    display: flex; 
-    justify-content: center; 
-    padding: 10px 60px; /* Space for the overlap */
+    display: flex; justify-content: center; 
+    padding: 0 50px; /* Space for fan overlap */
 }
 
 #hand .card { 
-    margin-left: -50px; /* This creates the overlapping effect */
-    cursor: pointer; 
-    transition: 0.2s;
+    margin-left: -50px; cursor: pointer; transition: 0.2s; 
 }
 
 #hand .card:first-child { margin-left: 0; }
 
 #hand .card:hover { 
-    transform: translateY(-40px); 
-    z-index: 100; 
+    transform: translateY(-40px); z-index: 100; 
 }
 
-/* Overlays */
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
     justify-content: center; align-items: center; z-index: 2000;
 }
 
-.menu-btn { padding: 15px 30px; font-size: 20px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 8px; }
 .hidden { display: none !important; }
+.menu-btn { padding: 15px 30px; font-size: 20px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 8px; }
