@@ -1,278 +1,272 @@
 // --- Game State ---
 let deck = [];
-let players = [[], []];
+let players = [[], []]; // Player 1 and Player 2 hands
 let playerNames = ["P1", "P2"];
-let currentPlayer = 0;
+let turn = 0; // 0 or 1
 let discard = null;
 let isAnimating = false;
-let wildPending = false;
-let isDraw4 = false;
 
 // --- Setup ---
 function startGame() {
-    const n1 = document.getElementById('p1-name-input').value;
-    const n2 = document.getElementById('p2-name-input').value;
-    if(n1) playerNames[0] = n1;
-    if(n2) playerNames[1] = n2;
-
-    document.getElementById('setup-screen').classList.add('hidden');
-    init();
-}
-
-function init() {
-    createDeck();
+    playerNames[0] = document.getElementById('p1-name').value || "Player 1";
+    playerNames[1] = document.getElementById('p2-name').value || "Player 2";
+    
+    buildDeck();
     shuffle(deck);
     
-    // Deal 7 cards (Instant for setup)
+    // Deal 7 cards to each
     for(let i=0; i<7; i++) {
         players[0].push(deck.pop());
         players[1].push(deck.pop());
     }
     
+    // Initial Discard
     discard = deck.pop();
-    while(discard.color === 'black' || discard.value > 9) {
-        deck.push(discard); shuffle(deck); discard = deck.pop();
+    while(discard.color === 'black') { 
+        deck.push(discard); shuffle(deck); discard = deck.pop(); 
     }
     
-    renderTable();
-    showPassScreen();
+    document.getElementById('setup-screen').classList.add('hidden');
+    prepTurn();
 }
 
-function createDeck() {
+function buildDeck() {
     const colors = ['red', 'blue', 'green', 'yellow'];
     deck = [];
+    
     colors.forEach(c => {
-        for(let i=0; i<=12; i++) {
-            deck.push({ color: c, value: i, img: `${c}.png` }); // Using your naming
-            if(i!==0) deck.push({ color: c, value: i, img: `${c}.png` });
+        // 0-9
+        for(let i=0; i<=9; i++) {
+            deck.push({ color: c, value: i, type: 'number', img: `${c}.png` });
+            if(i!==0) deck.push({ color: c, value: i, type: 'number', img: `${c}.png` });
         }
+        // Action Cards (10=Skip, 11=Reverse, 12=+2)
+        ['Skip', 'Rev', '+2'].forEach(action => {
+             deck.push({ color: c, value: action, type: 'action', img: `${c}.png` });
+             deck.push({ color: c, value: action, type: 'action', img: `${c}.png` });
+        });
     });
+    
+    // Wilds
     for(let i=0; i<4; i++) {
-        deck.push({ color: 'black', value: 'wild', img: 'wild.jpg' });
-        deck.push({ color: 'black', value: 'draw4', img: 'draw4.jpg' });
+        deck.push({ color: 'black', value: 'W', type: 'wild', img: 'wild.jpg' });
+        deck.push({ color: 'black', value: '+4', type: 'wild4', img: 'draw4.jpg' });
     }
 }
 
-// --- Animation Core ---
-function animateCard(startElem, endElem, imgSrc, callback) {
-    // 1. Get Coordinates
-    const startRect = startElem.getBoundingClientRect();
-    const endRect = endElem ? endElem.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight + 200, width: 0 };
+// --- Rendering ---
+function renderGame() {
+    // 1. Render Discard Pile
+    const discardEl = document.getElementById('discard-pile');
+    discardEl.innerHTML = '';
+    discardEl.appendChild(createCardElement(discard));
+
+    // 2. Render Hand
+    const handEl = document.getElementById('hand');
+    handEl.innerHTML = '';
     
-    // 2. Create Flying Clone
-    const flyer = document.createElement('img');
-    flyer.src = imgSrc;
-    flyer.className = 'flying-card';
-    flyer.style.left = `${startRect.left}px`;
-    flyer.style.top = `${startRect.top}px`;
-    document.getElementById('animation-layer').appendChild(flyer);
-
-    // 3. Trigger Animation (Wait 10ms for CSS to catch up)
-    setTimeout(() => {
-        flyer.style.left = `${endRect.left}px`;
-        flyer.style.top = `${endRect.top}px`;
-        flyer.style.transform = `rotate(${Math.random() * 20 - 10}deg) scale(1)`; // Add slight rotation
-    }, 10);
-
-    // 4. Cleanup
-    setTimeout(() => {
-        flyer.remove();
-        if(callback) callback();
-    }, 600); // Must match CSS transition time
-}
-
-// --- Gameplay ---
-function startTurn() {
-    document.getElementById('pass-screen').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-    renderHand();
-}
-
-function renderHand() {
-    const handDiv = document.getElementById('hand');
-    handDiv.innerHTML = '';
-    
-    players[currentPlayer].forEach((card, i) => {
-        const img = document.createElement('img');
-        img.src = `images/${card.img}`;
-        img.className = 'card shadow';
-        // Add ID to track position for animations
-        img.id = `card-${i}`;
-        img.onclick = () => playCard(i);
-        handDiv.appendChild(img);
+    players[turn].forEach((card, index) => {
+        const cardNode = createCardElement(card);
+        cardNode.onclick = () => tryPlayCard(index, cardNode);
+        handEl.appendChild(cardNode);
     });
+
+    // 3. Update Text
+    document.getElementById('turn-indicator').innerText = playerNames[turn].toUpperCase() + "'S TURN";
 }
 
-function renderTable() {
-    const pile = document.getElementById('discard-pile');
-    pile.innerHTML = `<img src="images/${discard.img}" class="card shadow">`;
-    document.getElementById('turn-display').innerText = playerNames[currentPlayer].toUpperCase();
+// Helper: Creates the visual card div
+function createCardElement(card) {
+    const div = document.createElement('div');
+    div.className = 'card-container';
+    
+    // Use the generic background image
+    div.style.backgroundImage = `url('images/${card.img}')`;
+    
+    // Add text overlay so we know what number it is!
+    // Don't show text for back of cards or if it's a graphical wild
+    if(card.value !== 'wild' && card.value !== 'draw4') {
+        const overlay = document.createElement('div');
+        overlay.className = 'card-overlay';
+        overlay.innerText = card.value;
+        div.appendChild(overlay);
+        
+        const corner = document.createElement('div');
+        corner.className = 'card-corner';
+        corner.innerText = card.value;
+        div.appendChild(corner);
+    }
+    return div;
 }
 
-function playCard(index) {
-    if(isAnimating || wildPending) return;
-
-    const card = players[currentPlayer][index];
-    const cardElem = document.getElementById(`card-${index}`);
-    const discardElem = document.getElementById('discard-pile');
-
-    // Rule Check
-    if (card.color === 'black' || card.color === discard.color || card.value === discard.value) {
+// --- Gameplay & Animation ---
+function tryPlayCard(index, cardElem) {
+    if(isAnimating) return;
+    const card = players[turn][index];
+    
+    // Logic: Match color, value, or black
+    if(card.color === 'black' || card.color === discard.color || card.value === discard.value) {
         isAnimating = true;
         
         // FLY ANIMATION: Hand -> Discard
-        animateCard(cardElem, discardElem, `images/${card.img}`, () => {
-            // Logic after animation lands
-            discard = players[currentPlayer].splice(index, 1)[0];
-            renderTable();
-            renderHand();
+        const discardRect = document.getElementById('discard-pile').getBoundingClientRect();
+        animateFly(cardElem, discardRect, () => {
+            // Commit Move
+            discard = players[turn].splice(index, 1)[0];
             
-            if (discard.color === 'black') {
-                isDraw4 = (discard.img === 'draw4.jpg');
-                wildPending = true;
+            // Handle Effects
+            if(discard.color === 'black') {
                 document.getElementById('wild-modal').classList.remove('hidden');
-                isAnimating = false;
+                isAnimating = false; // Wait for user to pick color
             } else {
-                handleActionCards(discard);
+                handleAction(discard);
             }
         });
         
-        // Hide original card instantly so it looks like it "lifted off"
-        cardElem.style.opacity = '0'; 
-
     } else {
-        // Shake Animation for Invalid Move
-        cardElem.classList.add('shake-anim');
+        // Shake animation for invalid
+        cardElem.classList.add('shake');
         showMessage("Can't play that!");
-        setTimeout(() => cardElem.classList.remove('shake-anim'), 400);
+        setTimeout(()=> cardElem.classList.remove('shake'), 500);
     }
 }
 
 function handleDraw() {
-    if(isAnimating || wildPending) return;
-    
-    const deckElem = document.getElementById('deck');
-    // We aim for the center of the screen (hand area)
-    const handArea = document.getElementById('hand'); 
-    
+    if(isAnimating) return;
     isAnimating = true;
-    const newCard = deck.pop();
     
     // FLY ANIMATION: Deck -> Hand
-    animateCard(deckElem, handArea, `images/back.png`, () => {
-        players[currentPlayer].push(newCard);
-        renderHand();
+    const deckEl = document.getElementById('deck-container');
+    const handEl = document.getElementById('hand');
+    const newCard = deck.pop();
+    
+    // Create a temp visual for animation
+    const tempCard = createCardElement(newCard); // Reveal card as it flies
+    // OR keep it face down:
+    const flyImg = document.createElement('img');
+    flyImg.src = 'images/back.png';
+    flyImg.className = 'flying-card';
+    
+    animateFly(deckEl, handEl.getBoundingClientRect(), () => {
+        players[turn].push(newCard);
+        renderGame();
         isAnimating = false;
         
-        // Auto-check if playable
-        if(newCard.color === 'black' || newCard.color === discard.color || newCard.value === discard.value) {
-            showMessage("Playable card drawn!");
+        // Auto-pass if not playable? (Optional, skipping for now)
+        if(!canPlay(newCard)) {
+            setTimeout(passTurn, 1000);
         } else {
-            showMessage("No match found.");
-            setTimeout(nextTurn, 1000);
+            showMessage("You drew a playable card!");
         }
-    });
+    }, 'images/back.png'); // Fly image source
 }
 
-function handleActionCards(card) {
-    const otherPlayer = (currentPlayer === 0) ? 1 : 0;
+// --- The Animation Engine ---
+function animateFly(startElem, endRect, callback, imgSrcOverride) {
+    const rect = startElem.getBoundingClientRect();
     
-    if (card.value === 10 || card.value === 11) { // Skip/Reverse
-        showMessage("SKIP! Go again!");
+    const flyer = document.createElement('div');
+    flyer.className = 'flying-card';
+    
+    // If it's a DOM element (card), clone its style
+    if(!imgSrcOverride && startElem.style) {
+        flyer.style.backgroundImage = startElem.style.backgroundImage;
+        flyer.innerHTML = startElem.innerHTML; // Copy numbers
+        flyer.style.backgroundColor = 'white';
+    } else {
+        flyer.style.backgroundImage = `url('${imgSrcOverride}')`;
+    }
+
+    flyer.style.left = rect.left + 'px';
+    flyer.style.top = rect.top + 'px';
+    
+    document.getElementById('anim-layer').appendChild(flyer);
+    
+    // Hide original
+    startElem.style.opacity = 0;
+
+    // Trigger Move
+    requestAnimationFrame(() => {
+        flyer.style.left = (endRect.left + 20) + 'px'; // Center offset
+        flyer.style.top = endRect.top + 'px';
+        flyer.style.transform = `scale(1) rotate(${Math.random()*10 - 5}deg)`;
+    });
+
+    setTimeout(() => {
+        flyer.remove();
+        callback();
+    }, 600);
+}
+
+// --- Logic Helpers ---
+function handleAction(card) {
+    const opponent = (turn + 1) % 2;
+    
+    if(card.value === 'Skip' || card.value === 'Rev') {
+        showMessage("SKIP! Play again.");
+        renderGame();
         isAnimating = false;
         checkWin();
-    } else if (card.value === 12) { // +2
+    } else if(card.value === '+2') {
         showMessage("Opponent draws 2!");
-        players[otherPlayer].push(deck.pop(), deck.pop());
+        players[opponent].push(deck.pop(), deck.pop());
+        renderGame();
         isAnimating = false;
-        checkWin(); // In 2p, +2 skips opponent, so current player goes again
+        checkWin(); // In 2P, +2 also skips, so play again
     } else {
         checkWin();
-        if(players[currentPlayer].length > 0) nextTurn();
+        if(players[turn].length > 0) passTurn();
     }
 }
 
-function pickWild(c) {
-    discard.color = c;
-    wildPending = false;
+function resolveWild(color) {
+    discard.color = color;
     document.getElementById('wild-modal').classList.add('hidden');
     
-    if(isDraw4) {
-        const otherPlayer = (currentPlayer === 0) ? 1 : 0;
-        players[otherPlayer].push(deck.pop(), deck.pop(), deck.pop(), deck.pop());
+    if(discard.value === '+4') {
+        const opponent = (turn + 1) % 2;
+        players[opponent].push(deck.pop(), deck.pop(), deck.pop(), deck.pop());
         showMessage("Opponent draws 4!");
     }
+    
     checkWin();
-    if(players[currentPlayer].length > 0) nextTurn();
+    if(players[turn].length > 0) passTurn();
 }
 
-function nextTurn() {
-    currentPlayer = (currentPlayer === 0) ? 1 : 0;
-    showPassScreen();
-}
-
-function showPassScreen() {
+function passTurn() {
+    isAnimating = false;
+    turn = (turn + 1) % 2;
     document.getElementById('game-ui').classList.add('hidden');
     document.getElementById('pass-screen').classList.remove('hidden');
-    document.getElementById('next-player-name').innerText = `READY ${playerNames[currentPlayer].toUpperCase()}?`;
+    document.getElementById('next-player-msg').innerText = `READY ${playerNames[turn]}?`;
 }
 
-function showMessage(msg) {
-    const box = document.getElementById('msg-box');
-    box.innerText = msg;
-    box.classList.add('visible');
-    setTimeout(() => box.classList.remove('visible'), 2000);
+function startTurn() {
+    document.getElementById('pass-screen').classList.add('hidden');
+    document.getElementById('game-ui').classList.remove('hidden');
+    renderGame();
 }
 
 function checkWin() {
-    if (players[currentPlayer].length === 0) {
-        document.getElementById('game-ui').classList.add('hidden');
-        const setup = document.getElementById('setup-screen');
-        setup.innerHTML = `<h1>${playerNames[currentPlayer]} WINS!</h1><button class="menu-btn" onclick="location.reload()">PLAY AGAIN</button>`;
-        setup.classList.remove('hidden');
-        startConfetti();
+    if(players[turn].length === 0) {
+        alert(playerNames[turn] + " WINS!");
+        location.reload();
     }
 }
 
-function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
+function showMessage(msg) {
+    const box = document.getElementById('message-box');
+    box.innerText = msg;
+    setTimeout(() => box.innerText = "", 2000);
+}
+
+function canPlay(card) {
+    return (card.color === 'black' || card.color === discard.color || card.value === discard.value);
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
+        [array[i], array[j]] = [array[j], array[i]];
     }
-}
-
-// --- Confetti Engine (No external library needed) ---
-function startConfetti() {
-    const canvas = document.getElementById('confetti-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    const particles = [];
-    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
-
-    for(let i=0; i<300; i++) {
-        particles.push({
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            vx: (Math.random() - 0.5) * 20,
-            vy: (Math.random() - 0.5) * 20,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            size: Math.random() * 10 + 5
-        });
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach((p, i) => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.5; // Gravity
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-            if(p.y > canvas.height) particles.splice(i, 1);
-        });
-        if(particles.length > 0) requestAnimationFrame(draw);
-    }
-    draw();
 }
