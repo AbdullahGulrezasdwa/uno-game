@@ -2,28 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate UNO</title>
+    <title>UNO Sandbox</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div id="game-container">
         <div id="table-center">
-            <div id="draw-pile" class="pile">
-                <img src="images/back.jpg" alt="Deck" class="card shadow">
-                <div class="deck-count">Draw Card</div>
+            <div id="draw-pile" onclick="drawCard()">
+                <img src="images/back.jpg" class="card shadow">
+                <div class="label">DRAW PILE (Click to Draw)</div>
             </div>
             
-            <div id="discard-pile" class="pile">
-                </div>
+            <div id="discard-pile">
+                <div class="placeholder">Play a card</div>
+            </div>
         </div>
 
-        <div id="player-hand-container">
-            <div id="player-hand"></div>
+        <div id="player-hand"></div>
+        
+        <div id="controls">
+            <button onclick="shuffleAndReset()">Reset Deck</button>
+            <button onclick="clearHand()">Clear Hand</button>
         </div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
