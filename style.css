@@ -18,24 +18,46 @@ body {
 .shadow { box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
 
 /* Hand Centering Logic */
+/* Container that stretches across the bottom */
 #hand-container {
-    position: fixed; bottom: 30px;
-    width: 100%; display: flex; justify-content: center;
+    position: fixed;
+    bottom: 30px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center; /* This centers the #hand div */
+    pointer-events: none;    /* Prevents the invisible box from blocking clicks */
 }
 
-#hand { 
-    display: flex; justify-content: center; 
-    padding: 0 50px; /* Space for fan overlap */
+/* The actual box holding the cards */
+#hand {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0 60px;         /* Adds a buffer for the fanned edges */
+    pointer-events: auto;    /* Re-enables clicks for the cards */
 }
 
-#hand .card { 
-    margin-left: -50px; cursor: pointer; transition: 0.2s; 
+#hand .card {
+    width: 110px;
+    border-radius: 8px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: transform 0.2s, margin 0.2s;
+    
+    /* This creates the overlap */
+    margin-left: -55px; 
 }
 
-#hand .card:first-child { margin-left: 0; }
+/* FIX: Remove negative margin from the first card so it stays centered */
+#hand .card:first-child {
+    margin-left: 0;
+}
 
-#hand .card:hover { 
-    transform: translateY(-40px); z-index: 100; 
+#hand .card:hover {
+    transform: translateY(-40px) scale(1.1);
+    z-index: 100;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.7);
 }
 
 .overlay {
