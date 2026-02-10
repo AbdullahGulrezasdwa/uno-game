@@ -1,30 +1,129 @@
 let deck = [];
-let hand = [];
-let topCard = null;
-const colors = ['red', 'blue', 'green', 'yellow'];
+let players = [[], []];
+let currentPlayer = 0;
+let discard = null;
+let wildPending = false;
 
 function init() {
     createDeck();
-    // Start Game: Draw 7 cards
-    for(let i=0; i<7; i++) hand.push(deck.pop());
-    // Set First Discard
-    topCard = deck.pop();
-    while(topCard.color === 'black') { deck.push(topCard); shuffle(deck); topCard = deck.pop(); }
-    render();
+    shuffle(deck);
+    
+    // Deal 7 cards to each
+    for(let i=0; i<7; i++) {
+        players[0].push(deck.pop());
+        players[1].push(deck.pop());
+    }
+    
+    // Set initial discard (cannot be wild)
+    discard = deck.pop();
+    while(discard.color === 'black') { 
+        deck.push(discard); 
+        shuffle(deck); 
+        discard = deck.pop(); 
+    }
+    
+    renderTable();
 }
 
 function createDeck() {
+    const colors = ['red', 'blue', 'green', 'yellow'];
+    deck = [];
     colors.forEach(c => {
         for(let i=0; i<=12; i++) {
+            // Numbers 0-9 and Special 10 (Rev), 11 (Skip), 12 (+2)
             deck.push({ color: c, value: i, img: `${c}${i}.png` });
             if(i !== 0) deck.push({ color: c, value: i, img: `${c}${i}.png` });
         }
     });
+    
+    // Added Wilds using your .jpg extension
     for(let i=0; i<4; i++) {
-        deck.push({ color: 'black', value: 'wild', img: 'wild.png' });
-        deck.push({ color: 'black', value: 'draw4', img: 'draw4.png' });
+        deck.push({ color: 'black', value: 'wild', img: 'wild.jpg' });
+        deck.push({ color: 'black', value: 'draw4', img: 'draw4.jpg' });
     }
-    shuffle(deck);
+}
+
+function renderTable() {
+    document.getElementById('discard-pile').innerHTML = `<img src="images/${discard.img}" class="card shadow">`;
+    document.getElementById('turn-display').innerText = `PLAYER ${currentPlayer + 1}`;
+}
+
+function showHand() {
+    document.getElementById('pass-screen').classList.add('hidden');
+    const handDiv = document.getElementById('hand');
+    handDiv.innerHTML = '';
+    
+    players[currentPlayer].forEach((card, i) => {
+        const img = document.createElement('img');
+        img.src = `images/${card.img}`;
+        img.className = 'card shadow';
+        img.onclick = () => playCard(i);
+        handDiv.appendChild(img);
+    });
+}
+
+function playCard(index) {
+    if(wildPending) return;
+    const card = players[currentPlayer][index];
+    
+    // Rule: Match color, match value, or play wild
+    if (card.color === 'black' || card.color === discard.color || card.value === discard.value) {
+        discard = players[currentPlayer].splice(index, 1)[0];
+        
+        if (discard.color === 'black') {
+            wildPending = true;
+            document.getElementById('wild-modal').classList.remove('hidden');
+        } else {
+            handleSpecials(discard);
+            prepareNextTurn();
+        }
+    } else {
+        document.getElementById('msg').innerText = "You can't play that!";
+        setTimeout(() => document.getElementById('msg').innerText = "Match Color or Number!", 1500);
+    }
+}
+
+function handleDraw() {
+    if(wildPending) return;
+    const pHand = players[currentPlayer];
+    const canPlay = pHand.some(c => c.color === 'black' || c.color === discard.color || c.value === discard.value);
+    
+    if(!canPlay) {
+        pHand.push(deck.pop());
+        showHand(); 
+    } else {
+        document.getElementById('msg').innerText = "Play a card from your hand!";
+    }
+}
+
+function pickWild(c) {
+    discard.color = c; 
+    wildPending = false;
+    document.getElementById('wild-modal').classList.add('hidden');
+    prepareNextTurn();
+}
+
+function prepareNextTurn() {
+    // Check for win
+    if (players[currentPlayer].length === 0) {
+        alert(`PLAYER ${currentPlayer + 1} WINS!`);
+        location.reload();
+        return;
+    }
+
+    currentPlayer = (currentPlayer === 0) ? 1 : 0;
+    document.getElementById('hand').innerHTML = ''; 
+    document.getElementById('next-player-name').innerText = `READY PLAYER ${currentPlayer + 1}?`;
+    document.getElementById('pass-screen').classList.remove('hidden');
+    renderTable();
+}
+
+function handleSpecials(card) {
+    // 12 is +2
+    if(card.value === 12) {
+        const target = (currentPlayer === 0) ? 1 : 0;
+        players[target].push(deck.pop(), deck.pop());
+    }
 }
 
 function shuffle(a) {
@@ -34,62 +133,4 @@ function shuffle(a) {
     }
 }
 
-function render() {
-    // Render Hand
-    const handDiv = document.getElementById('player-hand');
-    handDiv.innerHTML = '';
-    hand.forEach((card, i) => {
-        const img = document.createElement('img');
-        img.src = `images/${card.img}`;
-        img.className = 'card shadow';
-        img.onclick = () => playCard(i);
-        handDiv.appendChild(img);
-    });
-
-    // Render Discard
-    document.getElementById('discard-pile').innerHTML = `<img src="images/${topCard.img}" class="card shadow">`;
-}
-
-function playCard(i) {
-    const card = hand[i];
-    // RULE CHECK: Color on Color OR Number on Number OR Wild
-    if (card.color === 'black' || card.color === topCard.color || card.value === topCard.value) {
-        topCard = hand.splice(i, 1)[0];
-        
-        if (topCard.color === 'black') {
-            document.getElementById('wild-overlay').classList.remove('hidden');
-        } else {
-            document.getElementById('status-message').innerText = "Nice move!";
-            render();
-        }
-    } else {
-        document.getElementById('status-message').innerText = "Invalid Move! Match Color or Number.";
-    }
-}
-
-function autoDraw() {
-    // Check if player ALREADY has a playable card
-    const hasMove = hand.some(c => c.color === 'black' || c.color === topCard.color || c.value === topCard.value);
-    
-    if (hasMove) {
-        document.getElementById('status-message').innerText = "You have a card you can play!";
-        return;
-    }
-
-    // Auto-draw until a playable card is found
-    let drawnCard = deck.pop();
-    hand.push(drawnCard);
-    document.getElementById('status-message').innerText = "Drawing...";
-    
-    render();
-}
-
-function pickColor(c) {
-    topCard.color = c; // Change the required color
-    document.getElementById('wild-overlay').classList.add('hidden');
-    document.getElementById('status-message').innerText = `Color changed to ${c}!`;
-    render();
-}
-
-document.getElementById('draw-pile').onclick = autoDraw;
 init();
