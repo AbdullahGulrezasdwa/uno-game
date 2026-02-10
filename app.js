@@ -12,11 +12,9 @@ function init() {
         players[1].push(deck.pop());
     }
     discard = deck.pop();
-    // Prevent starting with a special card
+    // Ensure start card isn't wild or special
     while(discard.color === 'black' || discard.value > 9) { 
-        deck.push(discard); 
-        shuffle(deck); 
-        discard = deck.pop(); 
+        deck.push(discard); shuffle(deck); discard = deck.pop(); 
     }
     renderTable();
 }
@@ -81,6 +79,13 @@ function handleDraw() {
     }
 }
 
+function pickWild(c) {
+    discard.color = c;
+    wildPending = false;
+    document.getElementById('wild-modal').classList.add('hidden');
+    checkWin();
+}
+
 function checkWin() {
     if(players[currentPlayer].length === 0) {
         alert(`PLAYER ${currentPlayer + 1} WINS!`);
@@ -88,13 +93,6 @@ function checkWin() {
     } else {
         prepareNextTurn();
     }
-}
-
-function pickWild(c) {
-    discard.color = c;
-    wildPending = false;
-    document.getElementById('wild-modal').classList.add('hidden');
-    checkWin();
 }
 
 function prepareNextTurn() {
@@ -106,7 +104,7 @@ function prepareNextTurn() {
 }
 
 function handleSpecials(card) {
-    if(card.value === 12) { // +2 logic
+    if(card.value === 12) { // +2
         const target = (currentPlayer === 0) ? 1 : 0;
         players[target].push(deck.pop(), deck.pop());
     }
