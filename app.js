@@ -1,84 +1,71 @@
-const handElement = document.getElementById('player-hand');
-const discardElement = document.getElementById('discard-pile');
-const drawPile = document.getElementById('draw-pile');
-
-const COLORS = ['red', 'blue', 'green', 'yellow'];
 let deck = [];
-let playerHand = [];
+const colors = ['red', 'blue', 'green', 'yellow'];
 
-// 1. Initialize the Deck (Handling your specific 52 + Wilds)
 function createDeck() {
     deck = [];
-    COLORS.forEach(color => {
-        // Numbers 0-12 (10=Reverse, 11=Skip, 12=+2)
+    // Standard cards 0-12
+    colors.forEach(color => {
         for (let i = 0; i <= 12; i++) {
-            deck.push({ color, value: i, image: `${color}${i}.png` });
-            if (i !== 0) { // Standard UNO has two of 1-12
-                deck.push({ color, value: i, image: `${color}${i}.png` });
-            }
+            deck.push({ img: `${color}${i}.png` });
+            if (i !== 0) deck.push({ img: `${color}${i}.png` });
         }
     });
-
-    // Add Wilds (4 of each)
+    // Wilds
     for (let i = 0; i < 4; i++) {
-        deck.push({ color: 'black', value: 'wild', image: 'wild.png' });
-        deck.push({ color: 'black', value: 'draw4', image: 'draw4.png' });
+        deck.push({ img: 'wild.png' });
+        deck.push({ img: 'draw4.png' });
     }
+    shuffle(deck);
 }
 
-// 2. Shuffle Function
-function shuffleDeck() {
-    for (let i = deck.length - 1; i > 0; i--) {
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
+        [array[i], array[j]] = [array[j], array[i]];
     }
-}
-
-// 3. Render the Hand
-function updateUI() {
-    handElement.innerHTML = '';
-    playerHand.forEach((card, index) => {
-        const img = document.createElement('img');
-        img.src = `images/${card.image}`;
-        img.className = 'card shadow';
-        if (card.color === 'black') img.classList.add('wild-card');
-        
-        // Play Card Logic
-        img.onclick = () => playCard(index);
-        
-        handElement.appendChild(img);
-    });
-}
-
-// 4. Game Actions
-function playCard(index) {
-    const card = playerHand.splice(index, 1)[0];
-    
-    // Move to discard pile
-    discardElement.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = `images/${card.image}`;
-    img.className = 'card shadow';
-    discardElement.appendChild(img);
-    
-    updateUI();
 }
 
 function drawCard() {
-    if (deck.length > 0) {
-        playerHand.push(deck.pop());
-        updateUI();
+    if (deck.length === 0) {
+        alert("Deck is empty! Resetting...");
+        shuffleAndReset();
+        return;
     }
+    const card = deck.pop();
+    const img = document.createElement('img');
+    img.src = `images/${card.img}`;
+    img.className = 'card shadow';
+    
+    // Clicking a card in your hand plays it
+    img.onclick = function() {
+        playCard(this);
+    };
+    
+    document.getElementById('player-hand').appendChild(img);
 }
 
-// 5. Start Game
-drawPile.onclick = drawCard;
+function playCard(cardElement) {
+    const discardPile = document.getElementById('discard-pile');
+    discardPile.innerHTML = ''; // Clear old top card
+    
+    // Clone the card to the discard pile
+    const playedCard = cardElement.cloneNode(true);
+    playedCard.style.marginLeft = "0"; // Reset overlap
+    discardPile.appendChild(playedCard);
+    
+    // Remove from hand
+    cardElement.remove();
+}
 
+function shuffleAndReset() {
+    document.getElementById('player-hand').innerHTML = '';
+    document.getElementById('discard-pile').innerHTML = '<div class="placeholder">Play a card</div>';
+    createDeck();
+}
+
+function clearHand() {
+    document.getElementById('player-hand').innerHTML = '';
+}
+
+// Start with a fresh deck
 createDeck();
-shuffleDeck();
-
-// Deal starting hand (7 cards)
-for (let i = 0; i < 7; i++) {
-    playerHand.push(deck.pop());
-}
-updateUI();
