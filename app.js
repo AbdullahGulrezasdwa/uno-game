@@ -86,18 +86,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function createCard(card) {
-        const div = document.createElement('div');
-        div.className = 'card-visual';
-        div.style.backgroundImage = `url('images/${card.img}')`;
-        if(card.v !== 13 && card.v !== 14) {
-            const n = document.createElement('div');
-            n.className = 'num';
-            n.innerText = card.v;
-            div.appendChild(n);
-        }
-        return div;
+function createCard(card) {
+    const div = document.createElement('div');
+    div.className = 'card-visual';
+    
+    // Fallback: If image fails, show the color anyway
+    div.style.backgroundColor = card.c === 'black' ? '#222' : card.c;
+    div.style.border = "2px solid white";
+    
+    // The actual image
+    div.style.backgroundImage = `url('images/${card.img}')`;
+    div.style.backgroundSize = "cover";
+
+    if(card.v !== 13 && card.v !== 14) {
+        const n = document.createElement('div');
+        n.className = 'num';
+        n.innerText = card.v;
+        div.appendChild(n);
     }
+    return div;
+}
 
     function playCard(i, el) {
         if(state.isBusy) return;
