@@ -1,85 +1,117 @@
+/* Animated Background */
 body { 
-    background: radial-gradient(#2d5a27, #1a3a16); 
-    margin: 0; padding: 0;
-    display: flex; flex-direction: column; align-items: center; 
-    font-family: 'Arial', sans-serif; height: 100vh; color: white; overflow: hidden; 
+    background: linear-gradient(-45deg, #1a3a16, #2d5a27, #0f2210, #1e3c1b);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    margin: 0; 
+    height: 100vh; 
+    color: white; 
+    font-family: 'Arial Black', sans-serif; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
 }
 
-#table { display: flex; justify-content: center; align-items: center; gap: 60px; margin-top: 30px; }
-
-#deck-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-
-.draw-btn {
-    background: #e74c3c; color: white; border: 2px solid white;
-    padding: 8px 16px; border-radius: 5px; font-weight: bold; cursor: pointer;
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-.card { width: 110px; border-radius: 8px; }
-.shadow { box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
+/* UI Structure */
+#game-ui { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; transition: opacity 0.5s; }
+#table { display: flex; justify-content: center; align-items: center; gap: 80px; margin-top: 40px; }
+#status-bar { text-align: center; margin-top: 20px; z-index: 10; }
 
-/* Hand Centering Logic */
-/* Container that stretches across the bottom */
+/* Message Box */
+#msg-box {
+    background: rgba(0,0,0,0.5);
+    padding: 10px 20px;
+    border-radius: 20px;
+    margin-top: 10px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+#msg-box.visible { opacity: 1; }
+
+/* Card Styles */
+.card { width: 110px; border-radius: 10px; transition: transform 0.2s; user-select: none; }
+.shadow { box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+
+/* Animation Layer for flying cards */
+#animation-layer {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 1000;
+}
+.flying-card {
+    position: absolute; width: 110px; border-radius: 10px;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Hand Centering (The Fix) */
 #hand-container {
-    position: fixed;
-    bottom: 30px;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center; /* This centers the #hand div */
-    pointer-events: none;    /* Prevents the invisible box from blocking clicks */
+    position: fixed; bottom: 40px; width: 100%;
+    display: flex; justify-content: center; pointer-events: none;
 }
-
-/* The actual box holding the cards */
 #hand {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    padding: 0 60px;         /* Adds a buffer for the fanned edges */
-    pointer-events: auto;    /* Re-enables clicks for the cards */
+    display: flex; justify-content: center; align-items: flex-end;
+    padding: 0 50px; pointer-events: auto;
+}
+#hand .card { 
+    margin-left: -50px; 
+    transition: transform 0.2s, filter 0.2s;
+}
+#hand .card:first-child { margin-left: 0; }
+#hand .card:hover { 
+    transform: translateY(-40px) scale(1.1); 
+    filter: brightness(1.2); z-index: 100;
 }
 
-#hand .card {
-    width: 110px;
-    border-radius: 8px;
-    box-shadow: 0 8px 15px rgba(0,0,0,0.5);
-    cursor: pointer;
-    transition: transform 0.2s, margin 0.2s;
-    
-    /* This creates the overlap */
-    margin-left: -55px; 
+/* Animations */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-10px); }
+    100% { transform: translateX(0); }
+}
+.shake-anim { animation: shake 0.4s ease-in-out; }
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+}
+.pulse-text { animation: pulse 1s infinite; }
+
+/* Deck & Discard */
+#deck-container {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    transition: transform 0.2s; cursor: pointer;
+}
+#deck-container:active { transform: scale(0.95); }
+.draw-btn {
+    background: #e74c3c; padding: 10px 20px; font-weight: bold; border-radius: 5px;
+    border: none; color: white; cursor: pointer;
 }
 
-/* FIX: Remove negative margin from the first card so it stays centered */
-#hand .card:first-child {
-    margin-left: 0;
-}
-
-#hand .card:hover {
-    transform: translateY(-40px) scale(1.1);
-    z-index: 100;
-    box-shadow: 0 15px 30px rgba(0,0,0,0.7);
-}
-
+/* Overlay */
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+    background: rgba(0,0,0,0.95); display: flex; flex-direction: column;
     justify-content: center; align-items: center; z-index: 2000;
+    transition: opacity 0.5s; opacity: 1; pointer-events: auto;
 }
+.overlay.hidden { opacity: 0; pointer-events: none; }
+.colors { display: flex; gap: 20px; }
+.color-btn { width: 80px; height: 80px; border-radius: 50%; border: 4px solid white; cursor: pointer; }
+.red { background: #ff5555; }
+.blue { background: #5555ff; }
+.green { background: #55aa55; }
+.yellow { background: #ffaa00; }
 
-.hidden { display: none !important; }
-.menu-btn { padding: 15px 30px; font-size: 20px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 8px; }
-input[type="text"] {
-    padding: 12px;
-    margin: 10px;
-    border-radius: 5px;
-    border: none;
-    width: 250px;
-    font-size: 18px;
-    text-align: center;
-}
-
-#setup-screen h1 {
-    font-size: 48px;
-    color: #ffaa00;
-    text-shadow: 2px 2px black;
-}
+.hover-pop { transition: transform 0.1s; }
+.hover-pop:hover { transform: scale(1.1); }
