@@ -7,12 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="pass-screen" class="overlay">
-        <h1 id="next-player-name">READY PLAYER 1?</h1>
+    <div id="setup-screen" class="overlay">
+        <h1>UNO SETUP</h1>
+        <input type="text" id="p1-name-input" placeholder="Player 1 Name">
+        <input type="text" id="p2-name-input" placeholder="Player 2 Name">
+        <button class="menu-btn" onclick="startGame()">START GAME</button>
+    </div>
+
+    <div id="pass-screen" class="overlay hidden">
+        <h1 id="next-player-name">READY?</h1>
         <button class="menu-btn" onclick="showHand()">START TURN</button>
     </div>
 
-    <div id="game-ui">
+    <div id="game-ui" class="hidden">
         <div id="status-bar">
             <h2 id="turn-display">PLAYER 1</h2>
             <p id="msg">Match Color or Number!</p>
@@ -34,7 +41,7 @@
     </div>
 
     <div id="wild-modal" class="overlay hidden">
-        <h3>PICK A COLOR</h3>
+        <h3 id="wild-title">PICK A COLOR</h3>
         <div class="colors">
             <button onclick="pickWild('red')" style="background:#ff5555"></button>
             <button onclick="pickWild('blue')" style="background:#5555ff"></button>
