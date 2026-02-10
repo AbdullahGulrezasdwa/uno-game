@@ -2,29 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pro UNO - GitHub Pages</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO 2-Player Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="status-message">Match Color or Number!</div>
-    
-    <div id="game-container">
+    <div id="pass-screen" class="overlay">
+        <h1 id="next-player-name">READY PLAYER 1?</h1>
+        <button class="start-btn" onclick="showHand()">START TURN</button>
+    </div>
+
+    <div id="game-ui">
+        <div id="status-bar">
+            <h2 id="turn-display">PLAYER 1</h2>
+            <p id="msg">Match Color or Number!</p>
+        </div>
+        
         <div id="table">
-            <div id="draw-pile">
-                <img src="images/back.jpg" class="card shadow">
+            <div id="deck" onclick="handleDraw()">
+                <img src="images/back.jpg" class="card shadow" alt="Deck">
+                <div class="label">DRAW</div>
             </div>
             <div id="discard-pile"></div>
         </div>
 
-        <div id="player-hand"></div>
+        <div id="hand"></div>
     </div>
 
-    <div id="wild-overlay" class="hidden">
-        <h3>Choose a Color</h3>
-        <button onclick="pickColor('red')" style="background:red"></button>
-        <button onclick="pickColor('blue')" style="background:blue"></button>
-        <button onclick="pickColor('green')" style="background:green"></button>
-        <button onclick="pickColor('yellow')" style="background:yellow"></button>
+    <div id="wild-modal" class="overlay hidden">
+        <h3>PICK A COLOR</h3>
+        <div class="colors">
+            <button onclick="pickWild('red')" style="background:#ff5555"></button>
+            <button onclick="pickWild('blue')" style="background:#5555ff"></button>
+            <button onclick="pickWild('green')" style="background:#55aa55"></button>
+            <button onclick="pickWild('yellow')" style="background:#ffaa00"></button>
+        </div>
     </div>
 
     <script src="app.js"></script>
