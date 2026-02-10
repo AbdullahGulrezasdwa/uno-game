@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNO 2-Player Pro</title>
+    <title>UNO Ultimate Animated</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <canvas id="confetti-canvas"></canvas>
+
+    <div id="animation-layer"></div>
+
     <div id="setup-screen" class="overlay">
-        <h1>UNO SETUP</h1>
-        <input type="text" id="p1-name-input" placeholder="Player 1 Name">
-        <input type="text" id="p2-name-input" placeholder="Player 2 Name">
-        <button class="menu-btn" onclick="startGame()">START GAME</button>
+        <h1 class="pulse-text">UNO EXTREME</h1>
+        <div class="input-group">
+            <input type="text" id="p1-name-input" placeholder="Player 1" value="Player 1">
+            <input type="text" id="p2-name-input" placeholder="Player 2" value="Player 2">
+        </div>
+        <button class="menu-btn hover-pop" onclick="startGame()">START GAME</button>
     </div>
 
     <div id="pass-screen" class="overlay hidden">
-        <h1 id="next-player-name">READY?</h1>
-        <button class="menu-btn" onclick="showHand()">START TURN</button>
+        <h1 id="next-player-name" class="slide-in">READY?</h1>
+        <button class="menu-btn hover-pop" onclick="startTurn()">START TURN</button>
     </div>
 
     <div id="game-ui" class="hidden">
         <div id="status-bar">
             <h2 id="turn-display">PLAYER 1</h2>
-            <p id="msg">Match Color or Number!</p>
+            <div id="msg-box">Match Color or Number!</div>
         </div>
         
         <div id="table">
@@ -30,9 +36,12 @@
                 <div id="deck" onclick="handleDraw()">
                     <img src="images/back.png" class="card shadow" alt="Deck">
                 </div>
-                <button class="draw-btn" onclick="handleDraw()">DRAW CARD</button>
+                <button class="draw-btn hover-pop" onclick="handleDraw()">DRAW</button>
             </div>
-            <div id="discard-pile"></div>
+
+            <div id="discard-container">
+                <div id="discard-pile"></div>
+            </div>
         </div>
 
         <div id="hand-container">
@@ -40,13 +49,13 @@
         </div>
     </div>
 
-    <div id="wild-modal" class="overlay hidden">
+    <div id="wild-modal" class="overlay hidden fade-in">
         <h3 id="wild-title">PICK A COLOR</h3>
         <div class="colors">
-            <button onclick="pickWild('red')" style="background:#ff5555"></button>
-            <button onclick="pickWild('blue')" style="background:#5555ff"></button>
-            <button onclick="pickWild('green')" style="background:#55aa55"></button>
-            <button onclick="pickWild('yellow')" style="background:#ffaa00"></button>
+            <button onclick="pickWild('red')" class="color-btn red hover-pop"></button>
+            <button onclick="pickWild('blue')" class="color-btn blue hover-pop"></button>
+            <button onclick="pickWild('green')" class="color-btn green hover-pop"></button>
+            <button onclick="pickWild('yellow')" class="color-btn yellow hover-pop"></button>
         </div>
     </div>
 
