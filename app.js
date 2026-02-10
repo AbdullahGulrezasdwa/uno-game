@@ -1,272 +1,202 @@
-// --- Game State ---
-let deck = [];
-let players = [[], []]; // Player 1 and Player 2 hands
-let playerNames = ["P1", "P2"];
-let turn = 0; // 0 or 1
-let discard = null;
-let isAnimating = false;
+document.addEventListener('DOMContentLoaded', () => {
+    let state = {
+        deck: [],
+        players: [[], []],
+        names: ["P1", "P2"],
+        turn: 0,
+        discard: null,
+        isBusy: false
+    };
 
-// --- Setup ---
-function startGame() {
-    playerNames[0] = document.getElementById('p1-name').value || "Player 1";
-    playerNames[1] = document.getElementById('p2-name').value || "Player 2";
+    // UI Bindings
+    document.getElementById('start-btn').onclick = startGame;
+    document.getElementById('next-turn-btn').onclick = startTurn;
+    document.getElementById('deck').onclick = handleDraw;
     
-    buildDeck();
-    shuffle(deck);
-    
-    // Deal 7 cards to each
-    for(let i=0; i<7; i++) {
-        players[0].push(deck.pop());
-        players[1].push(deck.pop());
-    }
-    
-    // Initial Discard
-    discard = deck.pop();
-    while(discard.color === 'black') { 
-        deck.push(discard); shuffle(deck); discard = deck.pop(); 
-    }
-    
-    document.getElementById('setup-screen').classList.add('hidden');
-    prepTurn();
-}
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.onclick = () => resolveWild(btn.dataset.color);
+    });
 
-function buildDeck() {
-    const colors = ['red', 'blue', 'green', 'yellow'];
-    deck = [];
-    
-    colors.forEach(c => {
-        // 0-9
-        for(let i=0; i<=9; i++) {
-            deck.push({ color: c, value: i, type: 'number', img: `${c}.png` });
-            if(i!==0) deck.push({ color: c, value: i, type: 'number', img: `${c}.png` });
+    function startGame() {
+        state.names[0] = document.getElementById('p1-input').value || "Player 1";
+        state.names[1] = document.getElementById('p2-input').value || "Player 2";
+        
+        buildDeck();
+        shuffle(state.deck);
+        
+        state.players = [[], []];
+        for(let i=0; i<7; i++) {
+            state.players[0].push(state.deck.pop());
+            state.players[1].push(state.deck.pop());
         }
-        // Action Cards (10=Skip, 11=Reverse, 12=+2)
-        ['Skip', 'Rev', '+2'].forEach(action => {
-             deck.push({ color: c, value: action, type: 'action', img: `${c}.png` });
-             deck.push({ color: c, value: action, type: 'action', img: `${c}.png` });
-        });
-    });
-    
-    // Wilds
-    for(let i=0; i<4; i++) {
-        deck.push({ color: 'black', value: 'W', type: 'wild', img: 'wild.jpg' });
-        deck.push({ color: 'black', value: '+4', type: 'wild4', img: 'draw4.jpg' });
-    }
-}
-
-// --- Rendering ---
-function renderGame() {
-    // 1. Render Discard Pile
-    const discardEl = document.getElementById('discard-pile');
-    discardEl.innerHTML = '';
-    discardEl.appendChild(createCardElement(discard));
-
-    // 2. Render Hand
-    const handEl = document.getElementById('hand');
-    handEl.innerHTML = '';
-    
-    players[turn].forEach((card, index) => {
-        const cardNode = createCardElement(card);
-        cardNode.onclick = () => tryPlayCard(index, cardNode);
-        handEl.appendChild(cardNode);
-    });
-
-    // 3. Update Text
-    document.getElementById('turn-indicator').innerText = playerNames[turn].toUpperCase() + "'S TURN";
-}
-
-// Helper: Creates the visual card div
-function createCardElement(card) {
-    const div = document.createElement('div');
-    div.className = 'card-container';
-    
-    // Use the generic background image
-    div.style.backgroundImage = `url('images/${card.img}')`;
-    
-    // Add text overlay so we know what number it is!
-    // Don't show text for back of cards or if it's a graphical wild
-    if(card.value !== 'wild' && card.value !== 'draw4') {
-        const overlay = document.createElement('div');
-        overlay.className = 'card-overlay';
-        overlay.innerText = card.value;
-        div.appendChild(overlay);
         
-        const corner = document.createElement('div');
-        corner.className = 'card-corner';
-        corner.innerText = card.value;
-        div.appendChild(corner);
-    }
-    return div;
-}
+        state.discard = state.deck.pop();
+        while(state.discard.c === 'black') {
+            state.deck.push(state.discard); shuffle(state.deck); state.discard = state.deck.pop();
+        }
 
-// --- Gameplay & Animation ---
-function tryPlayCard(index, cardElem) {
-    if(isAnimating) return;
-    const card = players[turn][index];
-    
-    // Logic: Match color, value, or black
-    if(card.color === 'black' || card.color === discard.color || card.value === discard.value) {
-        isAnimating = true;
-        
-        // FLY ANIMATION: Hand -> Discard
-        const discardRect = document.getElementById('discard-pile').getBoundingClientRect();
-        animateFly(cardElem, discardRect, () => {
-            // Commit Move
-            discard = players[turn].splice(index, 1)[0];
-            
-            // Handle Effects
-            if(discard.color === 'black') {
-                document.getElementById('wild-modal').classList.remove('hidden');
-                isAnimating = false; // Wait for user to pick color
-            } else {
-                handleAction(discard);
+        document.getElementById('setup-screen').classList.add('hidden');
+        prepNextTurn();
+    }
+
+    function buildDeck() {
+        const colors = ['red', 'blue', 'green', 'yellow'];
+        state.deck = [];
+        colors.forEach(c => {
+            for(let i=0; i<=12; i++) {
+                let val = i;
+                if(i === 10) val = "Skip";
+                if(i === 11) val = "Rev";
+                if(i === 12) val = "+2";
+                state.deck.push({ c: c, v: val, img: c + ".png" });
+                if(i !== 0) state.deck.push({ c: c, v: val, img: c + ".png" });
             }
         });
-        
-    } else {
-        // Shake animation for invalid
-        cardElem.classList.add('shake');
-        showMessage("Can't play that!");
-        setTimeout(()=> cardElem.classList.remove('shake'), 500);
-    }
-}
-
-function handleDraw() {
-    if(isAnimating) return;
-    isAnimating = true;
-    
-    // FLY ANIMATION: Deck -> Hand
-    const deckEl = document.getElementById('deck-container');
-    const handEl = document.getElementById('hand');
-    const newCard = deck.pop();
-    
-    // Create a temp visual for animation
-    const tempCard = createCardElement(newCard); // Reveal card as it flies
-    // OR keep it face down:
-    const flyImg = document.createElement('img');
-    flyImg.src = 'images/back.png';
-    flyImg.className = 'flying-card';
-    
-    animateFly(deckEl, handEl.getBoundingClientRect(), () => {
-        players[turn].push(newCard);
-        renderGame();
-        isAnimating = false;
-        
-        // Auto-pass if not playable? (Optional, skipping for now)
-        if(!canPlay(newCard)) {
-            setTimeout(passTurn, 1000);
-        } else {
-            showMessage("You drew a playable card!");
+        for(let i=0; i<4; i++) {
+            state.deck.push({ c: 'black', v: 13, img: 'wild.jpg' });
+            state.deck.push({ c: 'black', v: 14, img: 'draw4.jpg' });
         }
-    }, 'images/back.png'); // Fly image source
-}
-
-// --- The Animation Engine ---
-function animateFly(startElem, endRect, callback, imgSrcOverride) {
-    const rect = startElem.getBoundingClientRect();
-    
-    const flyer = document.createElement('div');
-    flyer.className = 'flying-card';
-    
-    // If it's a DOM element (card), clone its style
-    if(!imgSrcOverride && startElem.style) {
-        flyer.style.backgroundImage = startElem.style.backgroundImage;
-        flyer.innerHTML = startElem.innerHTML; // Copy numbers
-        flyer.style.backgroundColor = 'white';
-    } else {
-        flyer.style.backgroundImage = `url('${imgSrcOverride}')`;
     }
 
-    flyer.style.left = rect.left + 'px';
-    flyer.style.top = rect.top + 'px';
-    
-    document.getElementById('anim-layer').appendChild(flyer);
-    
-    // Hide original
-    startElem.style.opacity = 0;
+    function prepNextTurn() {
+        document.getElementById('game-ui').classList.add('hidden');
+        document.getElementById('pass-screen').classList.remove('hidden');
+        document.getElementById('pass-msg').innerText = `READY ${state.names[state.turn].toUpperCase()}?`;
+    }
 
-    // Trigger Move
-    requestAnimationFrame(() => {
-        flyer.style.left = (endRect.left + 20) + 'px'; // Center offset
-        flyer.style.top = endRect.top + 'px';
-        flyer.style.transform = `scale(1) rotate(${Math.random()*10 - 5}deg)`;
-    });
+    function startTurn() {
+        document.getElementById('pass-screen').classList.add('hidden');
+        document.getElementById('game-ui').classList.remove('hidden');
+        render();
+    }
 
-    setTimeout(() => {
-        flyer.remove();
-        callback();
-    }, 600);
-}
+    function render() {
+        document.getElementById('turn-indicator').innerText = state.names[state.turn].toUpperCase();
+        const zone = document.getElementById('discard-zone');
+        zone.innerHTML = '';
+        zone.appendChild(createCard(state.discard));
 
-// --- Logic Helpers ---
-function handleAction(card) {
-    const opponent = (turn + 1) % 2;
-    
-    if(card.value === 'Skip' || card.value === 'Rev') {
-        showMessage("SKIP! Play again.");
-        renderGame();
-        isAnimating = false;
+        const hand = document.getElementById('hand');
+        hand.innerHTML = '';
+        state.players[state.turn].forEach((card, idx) => {
+            const el = createCard(card);
+            el.classList.add('hand-card');
+            el.onclick = () => playCard(idx, el);
+            hand.appendChild(el);
+        });
+    }
+
+    function createCard(card) {
+        const div = document.createElement('div');
+        div.className = 'card-visual';
+        div.style.backgroundImage = `url('images/${card.img}')`;
+        if(card.v !== 13 && card.v !== 14) {
+            const n = document.createElement('div');
+            n.className = 'num';
+            n.innerText = card.v;
+            div.appendChild(n);
+        }
+        return div;
+    }
+
+    function playCard(i, el) {
+        if(state.isBusy) return;
+        const card = state.players[state.turn][i];
+        if(card.c === 'black' || card.c === state.discard.c || card.v === state.discard.v) {
+            state.isBusy = true;
+            const target = document.getElementById('discard-zone').getBoundingClientRect();
+            animate(el, target, card.img, () => {
+                state.discard = state.players[state.turn].splice(i, 1)[0];
+                if(state.discard.c === 'black') {
+                    document.getElementById('wild-modal').classList.remove('hidden');
+                    state.isBusy = false;
+                } else {
+                    handleAction(state.discard);
+                }
+            });
+        } else {
+            el.style.animation = "shake 0.3s";
+            setTimeout(() => el.style.animation = "", 300);
+        }
+    }
+
+    function handleDraw() {
+        if(state.isBusy) return;
+        state.isBusy = true;
+        const card = state.deck.pop();
+        const start = document.getElementById('deck').getBoundingClientRect();
+        const end = { left: window.innerWidth/2 - 60, top: window.innerHeight - 200 };
+        animate(null, end, 'back.png', () => {
+            state.players[state.turn].push(card);
+            state.isBusy = false;
+            render();
+            if(!canPlay(card)) setTimeout(endTurn, 1000);
+        }, start);
+    }
+
+    function handleAction(card) {
+        const opp = (state.turn + 1) % 2;
+        if(card.v === 'Skip' || card.v === 'Rev' || card.v === '+2') {
+            if(card.v === '+2') state.players[opp].push(state.deck.pop(), state.deck.pop());
+            state.isBusy = false;
+            checkWin();
+            render();
+        } else {
+            checkWin();
+            endTurn();
+        }
+    }
+
+    function resolveWild(color) {
+        state.discard.c = color;
+        document.getElementById('wild-modal').classList.add('hidden');
+        if(state.discard.v === 14) {
+            const opp = (state.turn + 1) % 2;
+            for(let i=0; i<4; i++) state.players[opp].push(state.deck.pop());
+        }
         checkWin();
-    } else if(card.value === '+2') {
-        showMessage("Opponent draws 2!");
-        players[opponent].push(deck.pop(), deck.pop());
-        renderGame();
-        isAnimating = false;
-        checkWin(); // In 2P, +2 also skips, so play again
-    } else {
-        checkWin();
-        if(players[turn].length > 0) passTurn();
+        endTurn();
     }
-}
 
-function resolveWild(color) {
-    discard.color = color;
-    document.getElementById('wild-modal').classList.add('hidden');
-    
-    if(discard.value === '+4') {
-        const opponent = (turn + 1) % 2;
-        players[opponent].push(deck.pop(), deck.pop(), deck.pop(), deck.pop());
-        showMessage("Opponent draws 4!");
+    function endTurn() {
+        if(state.players[state.turn].length === 0) return;
+        state.turn = (state.turn + 1) % 2;
+        state.isBusy = false;
+        prepNextTurn();
     }
-    
-    checkWin();
-    if(players[turn].length > 0) passTurn();
-}
 
-function passTurn() {
-    isAnimating = false;
-    turn = (turn + 1) % 2;
-    document.getElementById('game-ui').classList.add('hidden');
-    document.getElementById('pass-screen').classList.remove('hidden');
-    document.getElementById('next-player-msg').innerText = `READY ${playerNames[turn]}?`;
-}
-
-function startTurn() {
-    document.getElementById('pass-screen').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-    renderGame();
-}
-
-function checkWin() {
-    if(players[turn].length === 0) {
-        alert(playerNames[turn] + " WINS!");
-        location.reload();
+    function animate(el, to, img, cb, startRectOverride) {
+        const rect = startRectOverride || el.getBoundingClientRect();
+        const flyer = document.createElement('div');
+        flyer.className = 'flying';
+        flyer.style.backgroundImage = `url('images/${img}')`;
+        flyer.style.left = rect.left + 'px';
+        flyer.style.top = rect.top + 'px';
+        document.getElementById('anim-layer').appendChild(flyer);
+        if(el) el.style.opacity = 0;
+        setTimeout(() => {
+            flyer.style.left = to.left + 'px';
+            flyer.style.top = to.top + 'px';
+            flyer.style.transform = "rotate(360deg)";
+        }, 10);
+        setTimeout(() => { flyer.remove(); cb(); }, 600);
     }
-}
 
-function showMessage(msg) {
-    const box = document.getElementById('message-box');
-    box.innerText = msg;
-    setTimeout(() => box.innerText = "", 2000);
-}
-
-function canPlay(card) {
-    return (card.color === 'black' || card.color === discard.color || card.value === discard.value);
-}
-
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    function canPlay(card) {
+        return card.c === 'black' || card.c === state.discard.c || card.v === state.discard.v;
     }
-}
+
+    function checkWin() {
+        if(state.players[state.turn].length === 0) {
+            alert(state.names[state.turn].toUpperCase() + " WINS!");
+            location.reload();
+        }
+    }
+
+    function shuffle(a) {
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+    }
+});
