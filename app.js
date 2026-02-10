@@ -1,71 +1,95 @@
 let deck = [];
+let hand = [];
+let topCard = null;
 const colors = ['red', 'blue', 'green', 'yellow'];
 
+function init() {
+    createDeck();
+    // Start Game: Draw 7 cards
+    for(let i=0; i<7; i++) hand.push(deck.pop());
+    // Set First Discard
+    topCard = deck.pop();
+    while(topCard.color === 'black') { deck.push(topCard); shuffle(deck); topCard = deck.pop(); }
+    render();
+}
+
 function createDeck() {
-    deck = [];
-    // Standard cards 0-12
-    colors.forEach(color => {
-        for (let i = 0; i <= 12; i++) {
-            deck.push({ img: `${color}${i}.png` });
-            if (i !== 0) deck.push({ img: `${color}${i}.png` });
+    colors.forEach(c => {
+        for(let i=0; i<=12; i++) {
+            deck.push({ color: c, value: i, img: `${c}${i}.png` });
+            if(i !== 0) deck.push({ color: c, value: i, img: `${c}${i}.png` });
         }
     });
-    // Wilds
-    for (let i = 0; i < 4; i++) {
-        deck.push({ img: 'wild.png' });
-        deck.push({ img: 'draw4.png' });
+    for(let i=0; i<4; i++) {
+        deck.push({ color: 'black', value: 'wild', img: 'wild.png' });
+        deck.push({ color: 'black', value: 'draw4', img: 'draw4.png' });
     }
     shuffle(deck);
 }
 
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+        [a[i], a[j]] = [a[j], a[i]];
     }
 }
 
-function drawCard() {
-    if (deck.length === 0) {
-        alert("Deck is empty! Resetting...");
-        shuffleAndReset();
+function render() {
+    // Render Hand
+    const handDiv = document.getElementById('player-hand');
+    handDiv.innerHTML = '';
+    hand.forEach((card, i) => {
+        const img = document.createElement('img');
+        img.src = `images/${card.img}`;
+        img.className = 'card shadow';
+        img.onclick = () => playCard(i);
+        handDiv.appendChild(img);
+    });
+
+    // Render Discard
+    document.getElementById('discard-pile').innerHTML = `<img src="images/${topCard.img}" class="card shadow">`;
+}
+
+function playCard(i) {
+    const card = hand[i];
+    // RULE CHECK: Color on Color OR Number on Number OR Wild
+    if (card.color === 'black' || card.color === topCard.color || card.value === topCard.value) {
+        topCard = hand.splice(i, 1)[0];
+        
+        if (topCard.color === 'black') {
+            document.getElementById('wild-overlay').classList.remove('hidden');
+        } else {
+            document.getElementById('status-message').innerText = "Nice move!";
+            render();
+        }
+    } else {
+        document.getElementById('status-message').innerText = "Invalid Move! Match Color or Number.";
+    }
+}
+
+function autoDraw() {
+    // Check if player ALREADY has a playable card
+    const hasMove = hand.some(c => c.color === 'black' || c.color === topCard.color || c.value === topCard.value);
+    
+    if (hasMove) {
+        document.getElementById('status-message').innerText = "You have a card you can play!";
         return;
     }
-    const card = deck.pop();
-    const img = document.createElement('img');
-    img.src = `images/${card.img}`;
-    img.className = 'card shadow';
+
+    // Auto-draw until a playable card is found
+    let drawnCard = deck.pop();
+    hand.push(drawnCard);
+    document.getElementById('status-message').innerText = "Drawing...";
     
-    // Clicking a card in your hand plays it
-    img.onclick = function() {
-        playCard(this);
-    };
-    
-    document.getElementById('player-hand').appendChild(img);
+    render();
 }
 
-function playCard(cardElement) {
-    const discardPile = document.getElementById('discard-pile');
-    discardPile.innerHTML = ''; // Clear old top card
-    
-    // Clone the card to the discard pile
-    const playedCard = cardElement.cloneNode(true);
-    playedCard.style.marginLeft = "0"; // Reset overlap
-    discardPile.appendChild(playedCard);
-    
-    // Remove from hand
-    cardElement.remove();
+function pickColor(c) {
+    topCard.color = c; // Change the required color
+    document.getElementById('wild-overlay').classList.add('hidden');
+    document.getElementById('status-message').innerText = `Color changed to ${c}!`;
+    render();
 }
 
-function shuffleAndReset() {
-    document.getElementById('player-hand').innerHTML = '';
-    document.getElementById('discard-pile').innerHTML = '<div class="placeholder">Play a card</div>';
-    createDeck();
-}
-
-function clearHand() {
-    document.getElementById('player-hand').innerHTML = '';
-}
-
-// Start with a fresh deck
-createDeck();
+document.getElementById('draw-pile').onclick = autoDraw;
+init();
